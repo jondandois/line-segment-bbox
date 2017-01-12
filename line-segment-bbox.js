@@ -1,7 +1,7 @@
 // utility for turning json line segment into sequence of bbox's
 
-const buffer = 20;
-const sampleJSON = {
+var buffer = 20;
+var sampleJSON = {
   "type": "Feature",
   "properties": {},
   "geometry": {
@@ -37,8 +37,10 @@ lineSegmentBbox(sampleJSON, buffer);
 // main function for parsing the geojson line into bboxs
 function lineSegmentBbox(line_json, buffer){
 	if (line_json.type === "Feature" && line_json.geometry.type === "LineString") {
-		const segments = getLineSegments(line_json.geometry.coordinates);
-		const segmentsR =  rotateSegments(segments);
+		var segments = getLineSegments(line_json.geometry.coordinates);
+		var segmentsR = rotateSegments(segments);
+		var segmentsB =  bufferSegments(segmentsR);
+		console.log(segmentsR);
 
 	} else {
 		console.warn("input must be only a Feature and geometry must be type LineString");
@@ -58,13 +60,45 @@ function getLineSegments(coordinates){
 
 // rotate line segments to standard orientation
 function rotateSegments(segments){
-	// segments
+	return segments.map(function(segment){
+		var rot = Math.atan2(segment[1][1] - segment[0][1], segment[1][0] - segment[0][0]);
+		return [
+			rotatePoints(segment[0][0], segment[0][1], -rot),
+			rotatePoints(segment[1][0], segment[1][1], -rot),
+			rot
+		];
+	});
 }
 
+// rotate a single xy coordinate pair on an angle
+function rotatePoints(x,y,angle){
+  var xR = x*Math.cos(angle) - y*Math.sin(angle);
+  var yR = x*Math.sin(angle) + y*Math.cos(angle);
+  return [xR, yR];
+}
 
-// for a set of coordinates get the angle and save it to the array
+function bufferSegments(segmentsR, buffer){
+	return segmentsR.map(function(segment){
 
-// given coordinates and angle, rotate using the 2d transform to the postivie X axis
+	});
+}
+
+var dummyCoordStruct = {
+	origCoords: [
+		[123, 456],
+		[123, 456]
+	],
+	rotatedCoords: [
+		[123, 456],
+		[123, 456]
+	],
+	rotation: 3434,
+	bufferedCoords: [
+		[123, 456],
+		[123, 456]
+	],
+	bbox: [1,2,3,4]
+};
 
 // compute buffer coordinates in the positive / negative y direction and return bbox
 
