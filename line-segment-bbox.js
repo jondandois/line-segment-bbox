@@ -1,6 +1,6 @@
 // utility for turning json line segment into sequence of bbox's
 
-var buffer = 20;
+var buffer = 1.5;
 var sampleJSON = {
   "type": "Feature",
   "properties": {},
@@ -39,9 +39,9 @@ function lineSegmentBbox(line_json, buffer){
 	if (line_json.type === "Feature" && line_json.geometry.type === "LineString") {
 		var segments = getLineSegments(line_json.geometry.coordinates);
 		var segmentsR = rotateSegments(segments);
-		var segmentsB =  bufferSegments(segmentsR);
-		console.log(segmentsR);
-
+		var segmentsBR =  bufferAndRotateSegments(segmentsR, buffer);
+		var boundaryPolygons = parseSegmentsToGeoJson(segmentsBR);
+		console.log(JSON.stringify(boundaryPolygons));
 	} else {
 		console.warn("input must be only a Feature and geometry must be type LineString");
 	}
@@ -71,38 +71,44 @@ function rotateSegments(segments){
 }
 
 // rotate a single xy coordinate pair on an angle
-function rotatePoints(x,y,angle){
-  var xR = x*Math.cos(angle) - y*Math.sin(angle);
-  var yR = x*Math.sin(angle) + y*Math.cos(angle);
+function rotatePoints(x,y,angle, reverse = null){
+	if (reverse){
+		var xR = x*Math.cos(angle) + y*Math.sin(angle);
+  	var yR = -1*x*Math.sin(angle) + y*Math.cos(angle);
+	} else {
+  	var xR = x*Math.cos(angle) - y*Math.sin(angle);
+  	var yR = x*Math.sin(angle) + y*Math.cos(angle);
+	}
   return [xR, yR];
 }
 
-function bufferSegments(segmentsR, buffer){
+// buffer segements and return a coordinates for a polygon array
+function bufferAndRotateSegments(segmentsR, buffer){
 	return segmentsR.map(function(segment){
-
+		var rot = segment[2];
+		var y0 = segment[0][1];
+		var x1 = segment[0][0];
+		var x2 = segment[1][0];
+		var UL = rotatePoints(x1, y0+buffer, -rot, true);
+		var UR = rotatePoints(x2, y0+buffer, -rot, true);
+		var LR = rotatePoints(x2, y0-buffer, -rot, true);
+		var LL = rotatePoints(x1, y0-buffer, -rot, true);
+		return [ UL, UR, LR, LL, UL];
 	});
 }
 
-var dummyCoordStruct = {
-	origCoords: [
-		[123, 456],
-		[123, 456]
-	],
-	rotatedCoords: [
-		[123, 456],
-		[123, 456]
-	],
-	rotation: 3434,
-	bufferedCoords: [
-		[123, 456],
-		[123, 456]
-	],
-	bbox: [1,2,3,4]
-};
-
-// compute buffer coordinates in the positive / negative y direction and return bbox
-
-// de-rotate the bbox
-
-// return a new geojson of bboxes along the segment
-
+function parseSegmentsToGeoJson(segments){
+	var newGeoJson = {};
+	newGeoJson.type = "FeatureCollection";
+	newGeoJson.features = [];
+	segments.map(function(segment){
+		newGeoJson.features.push({
+			"type": "Feature",
+			"geometry": {
+				"type": "Polygon",
+				"coordinates": [segment]
+			}
+		});
+	});
+	return newGeoJson;
+}
