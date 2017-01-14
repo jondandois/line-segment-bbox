@@ -72,12 +72,13 @@ function rotateSegments(segments){
 
 // rotate a single xy coordinate pair on an angle
 function rotatePoints(x,y,angle, reverse = null){
+	var xR, yR;
 	if (reverse){
-		var xR = x*Math.cos(angle) + y*Math.sin(angle);
-  	var yR = -1*x*Math.sin(angle) + y*Math.cos(angle);
+		xR = x*Math.cos(angle) + y*Math.sin(angle);
+  	yR = -1*x*Math.sin(angle) + y*Math.cos(angle);
 	} else {
-  	var xR = x*Math.cos(angle) - y*Math.sin(angle);
-  	var yR = x*Math.sin(angle) + y*Math.cos(angle);
+  	xR = x*Math.cos(angle) - y*Math.sin(angle);
+  	yR = x*Math.sin(angle) + y*Math.cos(angle);
 	}
   return [xR, yR];
 }
@@ -97,18 +98,33 @@ function bufferAndRotateSegments(segmentsR, buffer){
 	});
 }
 
-function parseSegmentsToGeoJson(segments){
+function parseSegmentsToGeoJson(polygons){
 	var newGeoJson = {};
 	newGeoJson.type = "FeatureCollection";
 	newGeoJson.features = [];
-	segments.map(function(segment){
+	polygons.map(function(polygon){
 		newGeoJson.features.push({
 			"type": "Feature",
+			"bbox": getBboxFromArray(polygon),
 			"geometry": {
 				"type": "Polygon",
-				"coordinates": [segment]
+				"coordinates": [polygon]
 			}
 		});
 	});
 	return newGeoJson;
+}
+
+function getBboxFromArray(polygon){
+	var xs = [], ys = [];
+	polygon.map(function(point){
+		xs.push(point[0]);
+		ys.push(point[1]);
+	});
+	return[
+		Math.min.apply(Math, xs),
+		Math.min.apply(Math, ys),
+		Math.max.apply(Math, xs),
+		Math.max.apply(Math, ys)
+	];
 }
